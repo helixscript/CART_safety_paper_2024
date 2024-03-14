@@ -25,7 +25,9 @@ CARTSite_Response <- read_excel("CARTSite.Response.BOR.01142022.xlsx",
 colnames(CARTSite_Response) <- c('Trial','ID','inf_date','response_date','response_timepoint','BOR','BORc','note')
 
 
-intSites <- data.frame(intSites)
+
+
+intSites <- readr::read_tsv('../expandedIntSiteData.tsv.gz')
 intSites[intSites$timePoint == '-D29',]$timePoint <- 'D0'
 intSites[intSites$timePoint == '-D48',]$timePoint <- 'D0'
 intSites[intSites$timePoint == '-D23',]$timePoint <- 'D0'
