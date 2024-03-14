@@ -1,0 +1,279 @@
+---
+params: 
+  pTRIAL: "ALL"
+  tPART: 'NoNE'
+  count: 'single'
+#title: "r params$tPART Patients"
+title: |
+  | Scan Stat clusters
+  | `r params$tPART` Patients and
+  | Response Groups (CR/PRtd & PR/NR & NA)
+#author: "Adrian Cantu (Adapted from Christopher Nobles)"
+date: "`r format(Sys.time(), '%Y %B %d')`"
+urlcolor: blue
+linkcolor: black
+output: 
+  pdf_document:
+#    latex_engine: lualatex
+    toc: false
+#    keep_md: true
+#    keep_tex: true
+    number_sections: false
+    toc_depth: 2
+    fig_caption: true
+    df_print: default
+    highlight: espresso
+header-includes: 
+  - \usepackage{float,indentfirst,booktabs,longtable,array,multirow,pdflscape,tabu,wrapfig,colortbl,threeparttable,threeparttablex,makecell,xcolor}
+  - \usepackage[normalem]{ulem}
+  - \setlength{\defaultaddspace}{0em}
+  - \setlength{\parindent}{2em}
+fontsize: 11pt
+geometry: margin=0.75in
+knit: (
+  function(inputFile, encoding) { 
+  
+    ptrial <- 'ALL'
+  
+    rmarkdown::render( 
+      input       = inputFile, 
+      encoding    = encoding, 
+      params      = list(pTRIAL=ptrial,
+                         count='single',
+                         tPART=ifelse(ptrial=='ALL','ALL',ifelse(ptrial=='CLL','CLL',ifelse(ptrial=='CALL','ALL and CLL','none')))),      
+      output_file = paste(ptrial,'_Scan_stats_single_', Sys.Date(), '.pdf', sep='')) })
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(kableExtra)
+library(gintools)
+library(GenomicRanges)
+
+
+if(!exists('workingDir')) {workingDir <- here::here()}
+if(!exists('utilsDir')) {utilsDir <- here::here("utils")}
+
+
+
+knitr::opts_chunk$set(
+  echo = FALSE,
+  fig.align = "center",
+  comment = "",
+  echo = FALSE,
+  warning = FALSE,
+  error = TRUE,
+  message = FALSE,
+  cache = FALSE,
+  dpi = 300,
+  dev = "png",
+  results = "asis",
+  fig.pos = "H",
+  fig.width = 7,
+  dev.args = list(type = "cairo-png")
+)
+TRIAL <- params$pTRIAL
+count_t <- params$count
+```
+
+```{r}
+
+
+annotate_scan_clusters <- function(scanned_ranges, tdn_sites, 
+                                   timepoint_sites, refGenes){
+  scanned_ranges$n_sites_tdn <- scan_sites_count(
+    scanned_ranges, tdn_sites)
+  scanned_ranges$n_sites_tp <- scan_sites_count(
+    scanned_ranges, timepoint_sites)
+  scanned_ranges$sum_abund_tdn <- scan_sites_abundance(
+    scanned_ranges, tdn_sites)
+  scanned_ranges$sum_abund_tp <- scan_sites_abundance(
+    scanned_ranges, timepoint_sites)
+  scanned_ranges$n_patients_tdn <- scan_patients(
+    scanned_ranges, tdn_sites)
+  scanned_ranges$n_patients_tp <- scan_patients(
+    scanned_ranges, timepoint_sites)
+  scanned_ranges$genes_in_cluster <- scan_genes(
+    scanned_ranges, refGenes)
+  scanned_ranges$in_gene_ort_tdn <- scan_orientation(
+    scanned_ranges, tdn_sites)
+  scanned_ranges$in_gene_ort_tp <- scan_orientation(
+    scanned_ranges, timepoint_sites)
+  scanned_ranges$ort_fisher_test <- scan_fisher_test_ort(
+    scanned_ranges$in_gene_ort_tdn, scanned_ranges$in_gene_ort_tp)
+  scanned_ranges
+}
+
+scan_sites_count <- function(clus_gr, sites){
+  sapply(1:length(clus_gr), function(i){
+    clus <- clus_gr[i]
+    hits <- subjectHits(findOverlaps(clus, sites))
+    length(unique(hits))
+  })
+}
+
+scan_sites_abundance <- function(clus_gr, sites){
+  sapply(1:length(clus_gr), function(i){
+    clus <- clus_gr[i]
+    hits <- subjectHits(findOverlaps(clus, sites))
+    sum(sites[hits]$estAbund)
+  })
+}
+scan_patients <- function(clus_gr, sites){
+  sapply(1:length(clus_gr), function(i){
+    clus <- clus_gr[i]
+    hits <- subjectHits(findOverlaps(clus, sites))
+    length(unique(sites[hits]$patient))
+  })
+}
+
+scan_genes <- function(clus_gr, refGenes){
+  sapply(1:length(clus_gr), function(i){
+    clus <- clus_gr[i]
+    hits <- subjectHits(findOverlaps(clus, refGenes))
+    paste(unique(refGenes[hits]$name2), collapse = ", ")
+  })
+}
+
+scan_orientation <- function(clus_gr, sites){
+  sapply(1:length(clus_gr), function(i){
+    clus <- clus_gr[i]
+    site_hits <- findOverlaps(clus, sites)
+    site_ort <- strand(sites[subjectHits(site_hits)])
+    gene_ort <- sites[subjectHits(site_hits)]$in_geneOrt
+    if(length(sites[subjectHits(site_hits)]) > 0){
+      df <- data.frame(
+        "posid" = generate_posid(sites[subjectHits(site_hits)]),
+        "site_ort" = as.character(site_ort),
+        "gene_ort" = as.character(gene_ort),
+        "patient" = sites[subjectHits(site_hits)]$patient,
+        stringsAsFactors = FALSE
+      )
+      df <- distinct(df)
+      df$same_orientation <- df$site_ort == df$gene_ort
+      score <- paste0(
+        "T", length(grep("TRUE", df$same_orientation)), ":",
+        "F", length(grep("FALSE", df$same_orientation)), ":",
+        "N", length(grep("TRUE", is.na(df$same_orientation)))
+      )
+    }else{
+      score <- "T0:F0:N0"
+    }
+    score
+  })
+}
+
+scan_fisher_test_ort <- function(score1, score2){
+  sapply(1:length(score1), function(i){
+    grp1 <- unlist(strsplit(score1[i], ":"))
+    grp2 <- unlist(strsplit(score2[i], ":"))
+    x <- matrix(c(
+      as.integer(substr(grp1[1], 2, 3)),
+      as.integer(substr(grp1[2], 2, 3)),
+      as.integer(substr(grp2[1], 2, 3)),
+      as.integer(substr(grp2[2], 2, 3))),
+      ncol = 2
+    )
+    fisher.test(x)$p.value
+  })
+}
+
+
+```
+
+```{r}
+
+refGenes <- readRDS(here::here('utils', "hg38.refSeq.rds"))
+#cond_uniq_sites <- readRDS(file.path(workingDir,paste0('ONLY_',TRIAL),paste0("only_",TRIAL,"_condensed_intsites.rds")))
+cond_uniq_sites <- readRDS(here::here('condensed_intsites',paste0(TRIAL,'_na_conintsites.rds')))
+tdn_sites <- cond_uniq_sites[cond_uniq_sites$timepoint == "d0"]
+timepoint_sites <- cond_uniq_sites[cond_uniq_sites$timepoint != "d0"]
+```
+
+
+
+```{r}
+groups_t <- ifelse(count_t=='single',"patient","specimen")
+
+clust_name <- here::here('gene_scan',paste0("only_",TRIAL,"_long_clusters_",count_t,".rds"))
+
+is_cache <- FALSE
+if(file.exists(clust_name)) {
+ if(as.Date(file.info(clust_name)$ctime) == Sys.Date()) {
+  is_cache <- TRUE 
+ }
+}
+
+if( !is_cache ) {
+  scan_sites <- gintools:::scan_format(
+  tdn_sites, timepoint_sites, grouping = groups_t) # use "patient" for the same insertion in multiple timepoints on the same patient to be counted as one, use "specimen" to be counted multiple times
+  
+scanned_clus <- geneRxCluster::gRxCluster(
+  object = scan_sites$chr, 
+  starts = scan_sites$pos, 
+  group = scan_sites$grp,
+  kvals = c(10L:50L),
+  nperm = 100L,
+  cutpt.tail.expr = critVal.target(k, n, target = 7.5, posdiff = x),
+  cutpt.filter.expr = apply(x, 2, quantile, probs = 0.35, na.rm = TRUE))
+
+  scanned_clus <- annotate_scan_clusters(
+    scanned_clus, tdn_sites, timepoint_sites, refGenes)
+
+  scanned_clus <- scanned_clus[ # make sure you have at least one site per cluster. I'm don't know how this code would be necessary
+    scanned_clus$n_patients_tdn > 1 | scanned_clus$n_patients_tp > 1]
+  saveRDS(scanned_clus,file = clust_name)
+}else{
+  scanned_clus <- readRDS(file = clust_name)
+}
+
+
+
+```
+
+This report list the clusters of insertion sites identified using Scan Statistics ([**Berry *et al.* 2014**](https://academic.oup.com/bioinformatics/article/30/11/1493/282534)) as significantly different between Pre-infusion (total **`r gt23::ppNum(length(reduce(tdn_sites)))`** sites) and Post-infusion samples (total **`r gt23::ppNum(length(reduce(timepoint_sites)))`** sites). 
+
+If an insertion site is found in multiple samples (time points) from the same patient within the same group (Pre- or Post-infusion), they are counted `r ifelse(count_t=='single',"only once.","multiple times.")`
+
+The table has the following columns:
+
+* **Cluster**: location on the genome. You can click to view in the UCSC genome browser [red marks are on the '+' strand (increasing chromosome position) and blue are on the '-' strand (decreasing chromosome position)]
+* **width**: width of the cluster
+* **num PreInf sites**: number of sites in this interval in the pre-infusion (time 0) samples
+* **num PostInf sites**: number of sites in this interval in the post-infusion samples
+* **target.min**: score of the cluster
+* **genes**: genes that intersect the cluster
+
+
+
+```{r needname,results='asis'}
+#linebreak(genes_in_cluster,align = 'l',linebreaker = ',')) Clusters identified by longitudinal observations.
+scanned_clus %>% 
+  as.data.frame(row.names = NULL) %>% 
+  mutate(width=gt23::ppNum(width)) %>% 
+  dplyr::mutate(cluster=paste0('\\href{https://genome.ucsc.edu/cgi-bin/hgTracks?db=hg38&hgct_customText=https://raw.githubusercontent.com/Adrian-Cantu/CART19_intsite_manuscript_analysis/master/BED/single_bed.txt&position=',seqnames,':',start,'-',end,'}{',seqnames,' [',gt23::ppNum(start),'-',gt23::ppNum(end),']','}')) %>%
+  select(c(cluster,width,n_sites_tdn,n_sites_tp,target.min,genes_in_cluster)) %>% 
+    mutate(genes_in_cluster=linebreak(genes_in_cluster,align = 'l',linebreaker = ',')) %>% 
+  dplyr::rename('num PreInf sites'=n_sites_tdn) %>% 
+  dplyr::rename('num PostInf sites'=n_sites_tp) %>% 
+  dplyr::rename('genes'=genes_in_cluster) %>% 
+  kbl(booktabs = T,longtable = T, escape=FALSE,caption ="Clusters identified by longitudinal observations",linesep = '\\midrule') %>%
+  kable_styling(latex_options = c("repeat_header"),font_size = 6)
+```
+
+```{r}
+
+ddf <- scanned_clus %>%
+  as.data.frame() %>% 
+  dplyr::select(c(seqnames,start,end,width,n_sites_tdn,n_sites_tp,target.min,genes_in_cluster)) %>% 
+    dplyr::rename('num PreInf sites'=n_sites_tdn) %>% 
+  dplyr::rename('num PostInf sites'=n_sites_tp) %>% 
+  dplyr::rename('genes'=genes_in_cluster) 
+
+wb <- openxlsx::createWorkbook()
+openxlsx::addWorksheet(wb, paste0('scan_',TRIAL))
+openxlsx::writeDataTable(wb,paste0('scan_',TRIAL),ddf)
+openxlsx::saveWorkbook(wb,here::here('gene_scan',paste0(TRIAL,"_clusters_",count_t,'_',format(Sys.time(), "%Y%m%d"),'.xlsx')),overwrite = TRUE)
+
+```
+

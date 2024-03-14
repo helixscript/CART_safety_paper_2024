@@ -1,0 +1,5 @@
+"0",""
+"0","refGenes <- readRDS(here::here('utils', ""hg38.refSeq.rds""))"
+"0","cond_uniq_sites <- readRDS(file.path(workingDir,paste0('ONLY_',TRIAL),paste0(""only_"",TRIAL,""_condensed_intsites.rds"")))"
+"2","Error in gzfile(file, ""rb"") : cannot open the connection
+"

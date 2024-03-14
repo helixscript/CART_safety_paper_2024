@@ -1,0 +1,28 @@
+{
+    "id": "075A75DB",
+    "path": null,
+    "project_path": null,
+    "type": "object_explorer",
+    "hash": "0",
+    "contents": "",
+    "dirty": false,
+    "created": 1702581574726.0,
+    "source_on_save": false,
+    "relative_order": 4,
+    "properties": {
+        "id": "f35a25fe8f1e4165880cd0eecdb7b727",
+        "name": "intsitesData",
+        "title": "intsitesData",
+        "language": "R",
+        "source_window_id": "",
+        "Source": "Source"
+    },
+    "folds": "",
+    "lastKnownWriteTime": 1702581548,
+    "encoding": "",
+    "collab_server": "",
+    "source_window": "",
+    "last_content_update": 1702581574726,
+    "read_only": false,
+    "read_only_alternatives": []
+}

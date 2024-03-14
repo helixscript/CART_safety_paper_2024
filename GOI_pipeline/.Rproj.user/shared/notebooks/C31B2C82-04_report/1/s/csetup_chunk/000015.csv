@@ -1,0 +1,78 @@
+"0","if(!all(packsLoaded)){
+  pandoc.table(data.frame(
+    ""R-Packages"" = names(packsLoaded),
+    ""Loaded"" = packsLoaded,
+    row.names = NULL))
+  stop(""Check dependancies."")
+}
+"
+"1","
+--------------------------------------
+         R.Packages            Loaded 
+----------------------------- --------
+        BiocGenerics            TRUE  
+
+        GenomicRanges           TRUE  
+
+           igraph               TRUE  
+
+           Matrix               TRUE  
+
+          gintools              TRUE  
+
+          spraphal              TRUE  
+
+         data.table             TRUE  
+
+         intergraph             TRUE  
+
+           network              TRUE  
+
+             sna                TRUE  
+
+            ggnet               TRUE  
+
+            dnet                TRUE  
+
+            GO.db               TRUE  
+
+          parallel              TRUE  
+
+           ggrepel              TRUE  
+
+           scales               TRUE  
+
+            grid                TRUE  
+
+          gridExtra             TRUE  
+
+        RColorBrewer            TRUE  
+
+          reshape2              TRUE  
+
+            knitr               TRUE  
+
+         kableExtra             TRUE  
+
+           UpSetR              FALSE  
+
+          BiasedUrn            FALSE  
+
+           foreach              TRUE  
+
+          KEGGREST              TRUE  
+
+          magrittr              TRUE  
+
+          tidyverse             TRUE  
+
+            gt34                TRUE  
+
+ BSgenome.Hsapiens.UCSC.hg38    TRUE  
+
+           pander               TRUE  
+--------------------------------------
+
+"
+"2","Error: Check dependancies.
+"

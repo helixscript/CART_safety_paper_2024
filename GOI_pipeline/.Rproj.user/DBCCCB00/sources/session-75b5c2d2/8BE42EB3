@@ -1,0 +1,26 @@
+{
+    "id": "8BE42EB3",
+    "path": "~/CART19_goi/initiate_analysis.R",
+    "project_path": "initiate_analysis.R",
+    "type": "r_source",
+    "hash": "0",
+    "contents": "",
+    "dirty": false,
+    "created": 1702574325155.0,
+    "source_on_save": false,
+    "relative_order": 2,
+    "properties": {
+        "source_window_id": "",
+        "Source": "Source",
+        "cursorPosition": "46,0",
+        "scrollLine": "0"
+    },
+    "folds": "",
+    "lastKnownWriteTime": 1675958681,
+    "encoding": "UTF-8",
+    "collab_server": "",
+    "source_window": "",
+    "last_content_update": 1675958681,
+    "read_only": false,
+    "read_only_alternatives": []
+}
