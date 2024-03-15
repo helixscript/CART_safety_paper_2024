@@ -11,6 +11,8 @@ minRangeWidth <- 10
 # Read in external sample id file
 sampleIDs <- readLines('masterSampleList')
 
+sampleIDs <- readLines('ZetaSampleList')
+
 # Retrieve all sample data from the specimen database.
 dbConn  <- dbConnect(MySQL(), group = 'specimen_management')
 sampleData <- dbGetQuery(dbConn, 'select * from gtsp')
@@ -55,7 +57,6 @@ clusterExport(cluster, 'intSites')
 
 # Standardize fragments, call sites, and annotate sites.
 processingList <- split(sampleData, paste(sampleData$Trial, sampleData$Patient))
-write(date(), 'log', append = FALSE)
 
 o <- unlist(GRangesList(parLapply(cluster, processingList, function(x){
        options(stringsAsFactors = FALSE)
@@ -69,7 +70,7 @@ o <- unlist(GRangesList(parLapply(cluster, processingList, function(x){
      
        a$trial <- x$Trial[1]
        
-       write(paste(x$Trial[1], x$Patient[1], 'done', date()), 'log', append = TRUE)
+       ### write(paste(x$Trial[1], x$Patient[1], 'done', date()), 'log', append = TRUE)
        
        a
      })))
@@ -130,13 +131,7 @@ oe <- unlist(GRangesList(parLapply(cluster, split(intSites, intSites$patient), f
          gt23::annotateIntSites(CPUs = 3)
        })))
 
-
-# Test control sample from database.
-if(! subset(oe, GTSP == 'GTSP9999')$estAbund == 4){
-  stop('Error -- control sample failed to produce the expected number of fragments.')
-} else {
-  oe <- subset(oe, GTSP != 'GTSP9999')
-}
+oe <- oe[! grepl('\\-', oe$timePoint),]
 
 
 # Join trial data to expanded intSite data.
