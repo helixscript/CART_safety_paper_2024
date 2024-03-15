@@ -21,22 +21,10 @@ CARTSite_Response <- read_excel("CARTSite.Response.BOR.01142022.xlsx",
                                 col_types = c("text", "numeric", "skip", 
                                               "date", "skip", "skip", "skip", "date", 
                                               "numeric", "text", "numeric", "text"))
-# BOR= best overal response
+# BOR= best overall response
 colnames(CARTSite_Response) <- c('Trial','ID','inf_date','response_date','response_timepoint','BOR','BORc','note')
 
-
-
-
-intSites <- readr::read_tsv('../expandedIntSiteData.tsv.gz')
-intSites[intSites$timePoint == '-D29',]$timePoint <- 'D0'
-intSites[intSites$timePoint == '-D48',]$timePoint <- 'D0'
-intSites[intSites$timePoint == '-D23',]$timePoint <- 'D0'
-intSites[intSites$timePoint == '10',]$timePoint   <- 'D10'
-intSites[intSites$timePoint == '14',]$timePoint   <- 'D14'
-intSites[intSites$timePoint == '28',]$timePoint   <- 'D28'
-intSites[intSites$timePoint == 'D07',]$timePoint  <- 'D7'
-intSites[intSites$timePoint == 'W52',]$timePoint  <- 'Y1'
-intSites <- makeGRangesFromDataFrame(intSites, keep.extra.columns = TRUE)
+intSites <- makeGRangesFromDataFrame(readr::read_tsv('../CART_safety_paper_2024/expandedIntSiteData.tsv.gz'), keep.extra.columns = TRUE)
 
 
 # match GTSP, PID and BOR

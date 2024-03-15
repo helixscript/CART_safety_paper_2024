@@ -11,8 +11,6 @@ minRangeWidth <- 10
 # Read in external sample id file
 sampleIDs <- readLines('masterSampleList')
 
-sampleIDs <- readLines('ZetaSampleList')
-
 # Retrieve all sample data from the specimen database.
 dbConn  <- dbConnect(MySQL(), group = 'specimen_management')
 sampleData <- dbGetQuery(dbConn, 'select * from gtsp')
