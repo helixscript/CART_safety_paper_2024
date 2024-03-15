@@ -23,16 +23,25 @@ analyzedSamples <- dbGetQuery(dbConn, 'select * from samples')
 analyzedSamples <- sub('\\-\\d+', '', analyzedSamples$sampleName)
 dbDisconnect(dbConn)
 
-# Create a annotation flag for table in manuscript supp.
-analyzedColFlag <- sampleIDs %in% analyzedSamples
-write(analyzedColFlag, 'flag1', ncolumns = 1)
-
 # Retrieve fragment data from db and limit fragments to hg38 reference genome.
 intSites <- gt23::getDBgenomicFragments(unique(sampleIDs), 'specimen_management', 'intsites_miseq')
 intSites <- subset(intSites, refGenome == 'hg38')
 
 # Remove very short ranges because they are likely not real and may break downstream fragment standardization.
 intSites <- intSites[width(intSites) >= minRangeWidth]
+
+# Remove negative timepoints.
+intSites <- intSites[! grepl('\\-', intSites$timePoint),]
+
+# correct odd timepoints
+intSites[intSites$timePoint == '10']$timePoint   <- 'D10'
+intSites[intSites$timePoint == '14']$timePoint   <- 'D14'
+intSites[intSites$timePoint == '28']$timePoint   <- 'D28'
+intSites[intSites$timePoint == 'D07']$timePoint  <- 'D7'
+intSites[intSites$timePoint == 'W52']$timePoint  <- 'Y1'
+
+intSites[intSites$timePoint == 'Y1']$timePointDays   <- 365
+intSites[intSites$timePoint == 'Y1']$timePointMonths <- 12
 
 
 # Limit sample data to samples with one more integration sites.
@@ -138,8 +147,3 @@ o2 <- c(o, oe)
 
 # Write out expanded intSite data.
 readr::write_tsv(data.frame(o2), 'expandedIntSiteData.tsv.gz')
-
-
-# Create a column for the master spreadsheet.
-numSampleSitesVector <- sapply(sampleIDs, function(x) n_distinct(subset(o2, GTSP == x)$posid))
-write(numSampleSitesVector, ncolumns = 1, 'numSampleSitesVector')
