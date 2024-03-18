@@ -73,8 +73,6 @@ o <- unlist(GRangesList(parLapply(cluster, processingList, function(x){
      
        a$trial <- x$Trial[1]
        
-       ### write(paste(x$Trial[1], x$Patient[1], 'done', date()), 'log', append = TRUE)
-       
        a
      })))
 
@@ -97,51 +95,6 @@ summary <- group_by(data.frame(o), trial, patient, GTSP, timePoint, cellType) %>
                      nearest_gene = paste0(nearestFeature[relAbund == max(relAbund)], collapse = '|')) %>%
            ungroup()
 
-openxlsx::write.xlsx(summary, 'intSiteSampleSummary.xlsx')
+openxlsx::write.xlsx(summary, 'zetaIntSiteSampleSummary.xlsx')
 
-readr::write_tsv(data.frame(o), 'intSiteData.tsv.gz')
-
-# Expand current sample list to include ALL samples from the same patient.
-dbConn  <- dbConnect(MySQL(), group = 'specimen_management')
-sampleData <- dbGetQuery(dbConn, 'select * from gtsp')
-dbDisconnect(dbConn)
-
-
-# Create unique pairs of Trial and Patient ids rooted in the master sample list.
-d <- distinct(select(subset(sampleData, SpecimenAccNum %in% sampleIDs), Trial, Patient))
-
-
-# Find additional samples associated with these pairings not in the already compiled data set.
-additional_ids <- unique(unlist(lapply(split(d, 1:nrow(d)), function(x){
-                    ids <- subset(sampleData, Trial == x$Trial & Patient == x$Patient)$SpecimenAccNum
-                    ids[! ids %in% o$GTSP]
-                  })))
-
-
-# Call and annotate expanded intSites.
-intSites <- gt23::getDBgenomicFragments(additional_ids, 'specimen_management', 'intsites_miseq')
-intSites <- subset(intSites, refGenome == 'hg38')
-intSites <- intSites[width(intSites) >= minRangeWidth]
-
-oe <- unlist(GRangesList(parLapply(cluster, split(intSites, intSites$patient), function(x){
-         options(stringsAsFactors = FALSE)
-         library(gt23)  
-         library(GenomicRanges)
-         library(dplyr)
-  
-         gt23::stdIntSiteFragments(x)  %>% 
-         gt23::collapseReplicatesCalcAbunds() %>%
-         gt23::annotateIntSites(CPUs = 3)
-       })))
-
-oe <- oe[! grepl('\\-', oe$timePoint),]
-
-
-# Join trial data to expanded intSite data.
-sampleData$trial <- sampleData$Trial
-oe <-  makeGRangesFromDataFrame(left_join(data.frame(oe), select(sampleData, SpecimenAccNum, trial), by = c('GTSP' = 'SpecimenAccNum')), keep.extra.columns = TRUE)
-
-o2 <- c(o, oe)
-
-# Write out expanded intSite data.
-readr::write_tsv(data.frame(o2), 'expandedIntSiteData.tsv.gz')
+readr::write_tsv(data.frame(o), 'zetaIntSiteData.tsv.gz')

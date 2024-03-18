@@ -4,7 +4,8 @@ library(parallel)
 library(ggrepel)
 
 CPUs <- 20
-earlyLateDaysCutoff <- 14
+earlyLateDaysCutoff <- c(0, 14)
+
 maxDistToNearestFeature <- 0 # Set to zero for in TU only.
 
 cluster <- makeCluster(CPUs)
@@ -84,5 +85,5 @@ p <- ggplot(subset(d, abs(percentChange) >= 3), aes(logValue(percentChange), plo
            panel.background = element_blank(), axis.line = element_line(colour = "black"))
 
 ggsave(p, file = 'volcanoPlot.pdf', units = 'in', width = 4, height = 8, dpi = 300)
+readr::write_tsv(subset(d, abs(percentChange) >= 3), 'volcanoPlot.tsv')
 
-save.image('myImage.RData')
